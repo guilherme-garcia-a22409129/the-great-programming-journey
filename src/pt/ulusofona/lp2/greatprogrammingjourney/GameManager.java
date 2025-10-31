@@ -1,177 +1,160 @@
 package pt.ulusofona.lp2.greatprogrammingjourney;
 
+import javax.swing.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 
 import static java.lang.Integer.parseInt;
 
 public class GameManager {
-    Tabuleiro tabuleiro;
-    static HashMap <Integer, Jogador> jogadores = new HashMap<>();
-    int jogadorAtual;
-    int nrTurnos = 0;
-    Jogador vencedor;
+    static HashMap <Integer, Jogador> jogadores; // initialize map inside createInitialBoard to avoid persistent data during tests
+    static Jogador vencedor;
+    static Tabuleiro tabuleiro;
+    static int nrTurnos = 0;
 
+    public GameManager() {}
 
-    public GameManager() {
-
-    }
     public boolean createInitialBoard(String[][] playerInfo, int worldSize){
-        int playerCount = 0;
-        if (playerInfo[0][0] != null) {
-            playerCount++;
-            Jogador jogador1 =
-                    new Jogador(parseInt(playerInfo[0][0]),
-                            playerInfo[0][1], playerInfo[0][2]);
-            jogadores.put(parseInt(playerInfo[0][0]), jogador1);
-        }
-        if (playerInfo[1][0] != null) {
-            playerCount++;
-            Jogador jogador2 =
-                    new Jogador(parseInt(playerInfo[1][0]),
-                            playerInfo[1][1], playerInfo[1][2]);
-            jogadores.put(parseInt(playerInfo[1][0]), jogador2);
-
-        }
-        if (playerInfo[2][0] != null) {
-            playerCount++;
-            Jogador jogador3 =
-                    new Jogador(parseInt(playerInfo[2][0]),
-                            playerInfo[2][1], playerInfo[2][2]);
-            jogadores.put(parseInt(playerInfo[2][0]), jogador3);
-        }
-        if (playerInfo[3][0] != null) {
-            playerCount++;
-            Jogador jogador4 =
-                    new Jogador(parseInt(playerInfo[3][0]),
-                            playerInfo[3][1], playerInfo[3][2]);
-            jogadores.put(parseInt(playerInfo[3][0]), jogador4);
-        }
-
-        if (playerCount < 2) {
+        if (playerInfo.length < 2 || playerInfo.length > 4) {
             return false;
         }
 
-        if (worldSize >= playerCount * 2) {
-            tabuleiro = new Tabuleiro(worldSize);
-            return true;
-        } else {
+        if (worldSize < playerInfo.length*2) {
             return false;
         }
+
+        jogadores = new HashMap<>();
+        for (String[] j : playerInfo) {
+            if (!Jogador.valida(j, jogadores)) {
+                return false;
+            }
+
+            Jogador jogador = new Jogador(j);
+            jogadores.put(jogador.id(), jogador);
+        }
+
+        tabuleiro = new Tabuleiro(worldSize);
+        vencedor = null;
+        nrTurnos = 1;
+
+        return true;
     }
 
     public String getImagePng(int nrSquare) {
-        if (nrSquare == 1) {
-            return "start.png";
-        } else if (nrSquare == tabuleiro.getUltimaPosicao()) {
-            return "finish.png";
-        } else if (nrSquare > 0 && nrSquare < tabuleiro.getUltimaPosicao()) {
-            return "normal.png";
-        }else {
-            return null;
-        }
+        return tabuleiro.slotImage(nrSquare);
     }
 
     public String[] getProgrammerInfo(int id){
+        id++;
         Jogador jogador = jogadores.get(id);
-
         if (jogador != null) {
-            String[] info = new String[4];
-            info[0] = Integer.toString(jogador.getId());
-            info[1] = jogador.getNome();
-            info[2] = jogador.getLinguagensFavoritas();
-            info[3] = jogador.getCor().toString();
-            return info;
-        } else {
-            return null;
+            return jogador.toArray();
         }
+        return null;
     }
 
     public String getProgrammerInfoAsStr(int id){
         Jogador jogador = jogadores.get(id);
-
         if (jogador != null) {
-            return jogador.getId() +
-                    " | " + jogador.getNome() +
-                    " | " + jogador.getPosicao() +
-                    " | " + jogador.getLinguagensFavoritas() +
-                    " | " + "Em Jogo"; // Estado fixo como "Em Jogo" ate á pt2
-        } else {
-            return null;
+            return jogador.toString();
         }
+        return null;
     }
 
-    public String[] getSlotInfo(int position){
-        String infoArr[] = new String[1];
-        String info = null;
+    public String[] getSlotInfo(int slot){
+        if (slot < 1 || slot > tabuleiro.tamanho()) {
+            return null;
+        }
+
+        String[] res = new String[]{""};
 
         for (Jogador jogador : jogadores.values()) {
-            if (jogador.estaNaPosicao(position)) {
-
-                if (info == null) {
-                    info = Integer.toString(jogador.getId());
-                } else {
-                    info += "," + jogador.getId();
-                }
+            if (jogador.posicao() == slot) {
+                res[0] += jogador.id() + ",";
             }
         }
 
-        infoArr[0] = info;
-        return infoArr;
+        if (!res[0].isEmpty()) {
+            res[0] = res[0].substring(0, res[0].length()-2);
+        }
+
+        return res;
     }
 
     public int getCurrentPlayerID(){
-        return jogadorAtual;
+        ArrayList<Integer> ids = new ArrayList<>(jogadores.keySet());
+        ids.sort(Integer::compareTo);
+
+        return (nrTurnos-1) % ids.size();
     }
 
-    public boolean moveCurrentPlayer(int nrSpaces){
-        if (nrSpaces <= 0 ) {
+    public boolean moveCurrentPlayer(int spaces){
+        if (spaces < 1 || spaces > 6) {
             return false;
         }
-        Jogador jogador = getJogadorAtual();
-        int posicaoInicial = jogador.getPosicao();
-        if (posicaoInicial + nrSpaces <= tabuleiro.getUltimaPosicao()) {
-            jogador.avancarCasas(nrSpaces);
-            return true;
-        } else {
-            int casasAmais = nrSpaces - tabuleiro.casasAteAMeta(posicaoInicial);
 
-            jogador.vaiParaPosicao(tabuleiro.ultimaPosicao - casasAmais);
-            return true;
+        Jogador jogador = jogadores.get(getCurrentPlayerID());
+
+        int pos = jogador.posicao();
+        spaces = (pos + spaces > tabuleiro.tamanho()) ? tabuleiro.tamanho() - pos : spaces;
+
+        jogador.avanca(spaces);
+        nrTurnos++;
+
+        // set winner
+        if (pos + spaces > tabuleiro.tamanho()) {
+           if (vencedor == null) {
+               vencedor = jogador;
+           }
         }
+
+        return true;
     }
 
     public boolean gameIsOver(){
-        for (Jogador jogador : jogadores.values()) {
-            if (jogador.estaNaPosicao(tabuleiro.getUltimaPosicao())) {
-                return true;
-            }
-        }
-        return false;
+        return !getSlotInfo(tabuleiro.tamanho())[0].isEmpty();
     }
 
     public ArrayList<String> getGameResults(){
-        ArrayList<String> results = new ArrayList<>();
-        results.add("THE GREAT PROGRAMMING JOURNEY");
-        results.add("");
-        results.add("NR. DE TURNOS");
-        results.add(String.valueOf(nrTurnos));
-        results.add("");
-        results.add("VENCEDOR");
-        results.add(vencedor.nome);
-        results.add("");
-        results.add("RESTANTES");
+        ArrayList<String> res = new ArrayList<>();
 
-        //falta implementar os outros jogadores organizados por posiçao (mais perto da meta)
+        res.add("THE GREAT PROGRAMMING JOURNEY");
+        res.add("");
+        res.add("NR. DE TURNOS");
+        res.add(String.valueOf(nrTurnos));
+        res.add("");
+        res.add("VENCEDOR");
+        res.add(((vencedor != null) ? vencedor.nome() : ""));
+        res.add("");
+        res.add("RESTANTES");
+        for (Jogador jogador : jogadores.values()) {
+            if (vencedor != null) {
+                if (vencedor.id() == jogador.id()) {
+                    continue;
+                }
+            }
 
-        return results;
+            res.add(jogador.nome());
+        }
+
+        return res;
     }
 
+    public JPanel getAuthorsPanel() {
+        return new JPanel();
+    }
+
+    public HashMap<String, String> customizeBoard() {
+        return new HashMap<>();
+    }
+
+    // ??
     public Jogador getJogador(int id) {
         return jogadores.get(id);
     }
 
+    // ??
     public Jogador getJogadorAtual() {
-        return jogadores.get(jogadorAtual);
+        return jogadores.get(getCurrentPlayerID());
     }
 }

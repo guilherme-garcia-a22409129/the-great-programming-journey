@@ -1,22 +1,25 @@
 package pt.ulusofona.lp2.greatprogrammingjourney;
 
 public class Tabuleiro {
-    int tamanho;
-    int ultimaPosicao = tamanho - 1;
+    private int tamanho;
 
     public Tabuleiro(int tamanho) {
         this.tamanho = tamanho;
     }
 
-    public int getTamanho() {
-        return tamanho;
+    public int tamanho() {
+        return this.tamanho;
     }
 
-    public int getUltimaPosicao() {
-        return ultimaPosicao;
-    }
-
-    public int casasAteAMeta(int posicaoAtual) {
-        return tamanho - posicaoAtual;
+    public String slotImage(int slot) {
+        if (slot == 1) {
+            return "start.png";
+        } else if (slot == this.tamanho-1) {
+            return "finish.png";
+        } else if (slot > 0 && slot < this.tamanho-1) {
+            return "normal.png";
+        } else {
+            return null;
+        }
     }
 }
