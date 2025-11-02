@@ -45,7 +45,6 @@ public class GameManager {
     }
 
     public String[] getProgrammerInfo(int id){
-        id++;
         Jogador jogador = jogadores.get(id);
         if (jogador != null) {
             return jogador.toArray();
