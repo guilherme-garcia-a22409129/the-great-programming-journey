@@ -96,18 +96,20 @@ public class GameManager {
         }
 
         Jogador jogador = jogadores.get(getCurrentPlayerID());
-
         int pos = jogador.posicao();
-        spaces = (pos + spaces > tabuleiro.tamanho()) ? tabuleiro.tamanho() - pos : spaces;
+
+        if (pos + spaces > tabuleiro.tamanho()) {
+            spaces = tabuleiro.tamanho() - pos;
+        }
 
         jogador.avanca(spaces);
         nrTurnos++;
 
         // set winner
-        if (pos + spaces > tabuleiro.tamanho()) {
-           if (vencedor == null) {
-               vencedor = jogador;
-           }
+        if (jogador.posicao() == tabuleiro.tamanho()) {
+            if (vencedor == null) {
+                vencedor = jogador;
+            }
         }
 
         return true;
@@ -129,13 +131,15 @@ public class GameManager {
         res.add(((vencedor != null) ? vencedor.nome() : ""));
         res.add("");
         res.add("RESTANTES");
-        for (Jogador jogador : jogadores.values()) {
-            if (vencedor != null) {
-                if (vencedor.id() == jogador.id()) {
-                    continue;
-                }
-            }
 
+        List<Jogador> rem = new ArrayList<>(jogadores.values());
+        if (vencedor != null) {
+            rem.removeIf(v -> v.id() == vencedor.id());
+        }
+
+        rem.sort((a, b) -> Integer.compare(b.posicao(), a.posicao()));
+
+        for (Jogador jogador : rem) {
             res.add(jogador.nome());
         }
 
